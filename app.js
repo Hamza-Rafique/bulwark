@@ -37,6 +37,13 @@ import {
     deleteRule
 } from './src/rule-engine.js';
 
+import {
+    logPRAnalysis,
+    logTestGeneration,
+    getAnalyticsSummary,
+    getAnalyticsByTimeRange
+} from './src/analytics.js';
+
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -347,6 +354,53 @@ expressApp.delete('/api/enterprise/rules/:ruleId', async (req, res) => {
             details: { ruleId, name: rule.name }
         });
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get analytics summary
+expressApp.get('/api/analytics/summary', async (req, res) => {
+    try {
+        const summary = await getAnalyticsSummary();
+        res.json(summary);
+    } catch (error) {
+        console.error('Analytics summary error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get analytics by date range
+expressApp.get('/api/analytics/range', async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    try {
+        const data = await getAnalyticsByTimeRange(startDate, endDate);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Log PR analysis (internal use)
+expressApp.post('/api/analytics/pr', async (req, res) => {
+    const { prNumber, repo, functionsFound, testsGenerated, risksFound, analysisTimeMs, status } = req.body;
+
+    try {
+        const entry = await logPRAnalysis({
+            prNumber,
+            repo,
+            functionsFound,
+            testsGenerated,
+            risksFound,
+            analysisTimeMs,
+            status,
+        });
+        res.json({ success: true, entry });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -669,7 +723,26 @@ async function handlePullRequestOpened({ octokit, payload }) {
         console.timeEnd('Phase 3: Output');
         console.timeEnd('Total PR Processing');
         console.log(`✅ Analysis complete for PR #${prNumber}`);
-
+        await logPRAnalysis({
+            prNumber,
+            repo: repoName,
+            functionsFound: functionsToTest.length,
+            testsGenerated: testResults.filter(r => r.isValid).length,
+            risksFound: riskFindings.length,
+            analysisTimeMs: performance.now(), // You'll need to track this
+            status: 'success',
+        });
+        // Also log test generation
+        for (const result of testResults) {
+            await logTestGeneration({
+                prId: prNumber,
+                repo: repoName,
+                functionName: result.function,
+                testLength: result.testCode?.length || 0,
+                isValid: result.isValid,
+                validationErrors: result.validationErrors || [],
+            });
+        }
     } catch (error) {
         console.error(`❌ Failed to process PR #${prNumber}:`, error);
 

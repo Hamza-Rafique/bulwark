@@ -1,5 +1,6 @@
 import express from 'express';
 import { getFeedbackStats } from './feedback-logger.js';
+import { getAnalyticsSummary} from './analytics.js'
 
 const router = express.Router();
 
@@ -216,21 +217,21 @@ router.get('/api/stats', async (req, res) => {
   }
 });
 
-// Add new API endpoint
-router.get('/api/analytics', async (req, res) => {
-  try {
-    const stats = await getFeedbackStats();
-    const invites = await getInviteStats();
+// // Add new API endpoint
+// router.get('/api/analytics', async (req, res) => {
+//   try {
+//     const stats = await getFeedbackStats();
+//     const invites = await getInviteStats();
     
-    res.json({
-      feedback: stats,
-      invites: invites,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+//     res.json({
+//       feedback: stats,
+//       invites: invites,
+//       timestamp: new Date().toISOString(),
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 // Add this to dashboard.js
 router.get('/api/risks', async (req, res) => {
     try {
@@ -243,6 +244,128 @@ router.get('/api/risks', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+// Add this to dashboard.js
+router.get('/analytics', async (req, res) => {
+    try {
+        const summary = await getAnalyticsSummary();
+        
+        res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Bulwark Analytics</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }
+                .container { max-width: 1200px; margin: 0 auto; }
+                .header { text-align: center; padding: 40px 0; }
+                .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+                .card { background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; }
+                .card h3 { color: #8b949e; font-size: 0.9em; margin-bottom: 10px; }
+                .card .value { font-size: 2em; font-weight: bold; }
+                .card .sub { color: #8b949e; font-size: 0.8em; margin-top: 5px; }
+                .chart-container { background: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin: 20px 0; }
+                .chart-container h3 { margin-bottom: 15px; color: #e6edf3; }
+                .bar { display: flex; gap: 10px; align-items: flex-end; height: 200px; }
+                .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+                .bar-fill { width: 100%; background: linear-gradient(to top, #238636, #2ea043); border-radius: 4px 4px 0 0; transition: height 0.5s; }
+                .bar-label { color: #8b949e; font-size: 0.7em; margin-top: 5px; }
+                .green { color: #3fb950; }
+                .blue { color: #58a6ff; }
+                .orange { color: #d29922; }
+                .red { color: #f85149; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 Bulwark Analytics</h1>
+                    <p style="color: #8b949e;">Real-time insights into your code review bot</p>
+                </div>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h3>📝 PRs Analyzed</h3>
+                        <div class="value blue">${summary.total.prs}</div>
+                        <div class="sub">${summary.daily.slice(-7).reduce((sum, d) => sum + d.prs, 0)} in last 7 days</div>
+                    </div>
+                    <div class="card">
+                        <h3>🧪 Tests Generated</h3>
+                        <div class="value green">${summary.total.tests}</div>
+                        <div class="sub">${summary.daily.slice(-7).reduce((sum, d) => sum + d.tests, 0)} in last 7 days</div>
+                    </div>
+                    <div class="card">
+                        <h3>⚠️ Risks Found</h3>
+                        <div class="value orange">${summary.total.risks}</div>
+                        <div class="sub">${summary.daily.slice(-7).reduce((sum, d) => sum + d.risks, 0)} in last 7 days</div>
+                    </div>
+                    <div class="card">
+                        <h3>💬 Feedback</h3>
+                        <div class="value">${summary.total.feedback}</div>
+                        <div class="sub">${summary.averages.functionsPerPR} functions per PR avg</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>📈 Daily Activity (Last 7 Days)</h3>
+                    <div class="bar">
+                        ${summary.daily.map(d => `
+                            <div class="bar-item">
+                                <div class="bar-fill" style="height: ${Math.max(10, d.prs * 20)}px;"></div>
+                                <div class="bar-label">${d.date.slice(5)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="display: flex; gap: 20px; justify-content: center; margin-top: 15px; color: #8b949e; font-size: 0.8em;">
+                        <span>📝 ${summary.daily.reduce((sum, d) => sum + d.prs, 0)} PRs</span>
+                        <span>🧪 ${summary.daily.reduce((sum, d) => sum + d.tests, 0)} Tests</span>
+                        <span>⚠️ ${summary.daily.reduce((sum, d) => sum + d.risks, 0)} Risks</span>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 20px;">
+                    <h3>⚡ Average Performance</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 10px;">
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.8em;">Analysis Time</div>
+                            <div style="font-size: 1.2em; font-weight: bold;">${summary.averages.analysisTimeMs}ms</div>
+                        </div>
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.8em;">Functions per PR</div>
+                            <div style="font-size: 1.2em; font-weight: bold;">${summary.averages.functionsPerPR}</div>
+                        </div>
+                        <div>
+                            <div style="color: #8b949e; font-size: 0.8em;">Tests per PR</div>
+                            <div style="font-size: 1.2em; font-weight: bold;">${summary.averages.testsPerPR}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 20px;">
+                    <h3>📋 Recent PRs</h3>
+                    ${summary.recentPRs.map(pr => `
+                        <div style="padding: 10px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>#${pr.prNumber}</strong>
+                                <span style="color: #8b949e; margin-left: 10px;">${pr.repo}</span>
+                            </div>
+                            <div>
+                                <span style="color: #58a6ff;">${pr.functionsFound || 0} functions</span>
+                                <span style="color: #3fb950; margin-left: 10px;">${pr.testsGenerated || 0} tests</span>
+                                <span style="color: #d29922; margin-left: 10px;">${pr.risksFound || 0} risks</span>
+                                <span style="color: #8b949e; margin-left: 10px; font-size: 0.8em;">${new Date(pr.timestamp).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${summary.recentPRs.length === 0 ? '<div style="padding: 20px; text-align: center; color: #8b949e;">No PRs analyzed yet</div>' : ''}
+                </div>
+            </div>
+        </body>
+        </html>
+        `);
+    } catch (error) {
+        res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`);
     }
 });
 

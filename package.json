@@ -8,6 +8,8 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "send-invites": "node scripts/send-invites.js",
+     "analytics": "node scripts/analytics-report.js",
+    "health": "node scripts/health-check.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
