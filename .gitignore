@@ -1,0 +1,7 @@
+.env
+/bulwark-dev-hamza.2026-08-23.private-key.pem
+./bulwark-dev-hamza.2026-08-23.private-key.pem
+bulwark-dev-hamza.2026-08-23.private-key.pem
+
+node_modules
+./node_modules

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sql-injection",
+    "regex": "(exec|execute|query)\\s*\\(\\s*['\"`]\\s*SELECT.*\\$\\{|(exec|execute|query)\\s*\\(\\s*['\"`]\\s*INSERT.*\\$\\{|(exec|execute|query)\\s*\\(\\s*['\"`]\\s*UPDATE.*\\$\\{",
+    "severity": "critical",
+    "title": "Potential SQL Injection",
+    "description": "This code uses string interpolation in a SQL query, which could lead to SQL injection attacks.",
+    "fix": "Use parameterized queries instead of string interpolation.",
+    "examples": ["exec(`SELECT * FROM users WHERE id = ${userId}`)"]
+  },
+  {
+    "id": "null-check-missing",
+    "regex": "(?<!if\\s*\\(\\s*[\\w.]+\\s*[!]==\\s*(?:null|undefined)\\s*\\)\\s*return\\s*;)(?<!if\\s*\\(\\s*[\\w.]+\\s*\\.\\s*length\\s*>\\s*0\\s*\\)\\s*{)[^{]*\\.[^{]*\\s*[^?]",
+    "severity": "high",
+    "title": "Potential Null Pointer",
+    "description": "This function accesses object properties without checking if the object is null or undefined.",
+    "fix": "Add null checks before accessing properties: if (!obj) return;",
+    "examples": ["user.name", "items[0].price"]
+  },
+  {
+    "id": "unhandled-async",
+    "regex": "async\\s+function\\s+\\w+[\\s\\S]*?(?<!await\\s+)(?!try\\s*\\{)[^{]*$",
+    "severity": "high",
+    "title": "Unhandled Promise",
+    "description": "This async function may not handle errors properly.",
+    "fix": "Wrap async operations in try/catch or add .catch() handlers.",
+    "examples": ["await fetchData()", "await saveData()"]
+  },
+  {
+    "id": "hardcoded-credentials",
+    "regex": "(password|secret|key|token|apiKey|auth|credential)\\s*[:=]\\s*['\"`][^'\"`]{8,}['\"`]",
+    "severity": "critical",
+    "title": "Hardcoded Credentials",
+    "description": "This code contains hardcoded credentials, which is a security risk.",
+    "fix": "Use environment variables instead of hardcoded credentials.",
+    "examples": ["password: 'secret123'", "apiKey: 'abc123def456'"]
+  },
+  {
+    "id": "console-log",
+    "regex": "console\\.(log|debug|info|warn|error)\\(",
+    "severity": "low",
+    "title": "Console Statement",
+    "description": "This code contains console statements that should be removed in production.",
+    "fix": "Remove console statements or use proper logging framework.",
+    "examples": ["console.log('debug')", "console.error('error')"]
+  },
+  {
+    "id": "infinite-loop",
+    "regex": "while\\s*\\(\\s*true\\s*\\)[^}]*}",
+    "severity": "high",
+    "title": "Potential Infinite Loop",
+    "description": "This code contains a while(true) loop without a break condition.",
+    "fix": "Add a break condition or use a counter to prevent infinite loops.",
+    "examples": ["while (true) { ... }"]
+  },
+  {
+    "id": "deprecated-api",
+    "regex": "fs\\.writeFileSync|fs\\.readFileSync|child_process\\.exec|eval\\(",
+    "severity": "medium",
+    "title": "Deprecated or Unsafe API",
+    "description": "This code uses deprecated or unsafe APIs that should be updated.",
+    "fix": "Use safer alternatives like fs.promises or async/await.",
+    "examples": ["fs.writeFileSync", "eval('...')"]
+  },
+  {
+    "id": "missing-rate-limit",
+    "regex": "for\\s*\\([^)]*\\)\\s*{((?!await\\s+sleep|setTimeout|setInterval)[\\s\\S])*}",
+    "severity": "medium",
+    "title": "Missing Rate Limiting",
+    "description": "This loop may process many items without rate limiting.",
+    "fix": "Add rate limiting or batching to prevent overwhelming APIs.",
+    "examples": ["for (item of items) { await process(item) }"]
+  }
+]

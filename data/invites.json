@@ -1,0 +1,22 @@
+{
+  "invites": [
+    {
+      "code": "a3a26a7743c3",
+      "email": "test@example.com",
+      "createdBy": "system",
+      "createdAt": "2026-09-02T09:22:29.662Z",
+      "used": false,
+      "usedAt": null,
+      "usedBy": null
+    },
+    {
+      "code": "b3ab8a3859e5",
+      "email": "hamzarafique964@gmail.com",
+      "createdBy": "system",
+      "createdAt": "2026-09-02T09:31:06.351Z",
+      "used": false,
+      "usedAt": null,
+      "usedBy": null
+    }
+  ]
+}

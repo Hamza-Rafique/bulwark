@@ -1,0 +1,20 @@
+name: Bulwark AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  bulwark-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Bulwark Analysis
+        uses: yourusername/bulwark@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
+          severity-threshold: medium
+          fail-on-critical: true

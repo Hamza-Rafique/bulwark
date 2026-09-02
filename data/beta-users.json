@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "id": "mtif6hmgmqm8h",
+      "email": "test@example.com",
+      "createdAt": "2026-09-01T08:43:06.040Z",
+      "status": "invited",
+      "inviteCode": "a3a26a7743c3"
+    },
+    {
+      "id": "mtjwai76svlus",
+      "email": "hamzarafique964@gmail.com",
+      "createdAt": "2026-09-02T09:29:53.058Z",
+      "status": "invited",
+      "inviteCode": "b3ab8a3859e5"
+    }
+  ]
+}

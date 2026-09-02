@@ -1,0 +1,21 @@
+Subject: 🛡️ You're invited to join Bulwark Beta!
+
+Hi {{email}},
+
+Great news! You've been selected to join the Bulwark beta.
+
+Bulwark is an AI-powered code review tool that:
+- 🔍 Instantly analyzes your PRs for risks
+- 🤖 Auto-generates unit tests
+- ⚡ Catches bugs before they reach production
+
+Your invite code: {{inviteCode}}
+
+Get started now:
+1. Install the GitHub App: {{appUrl}}
+2. Create a test PR and watch Bulwark in action
+3. Share your feedback with us
+
+Questions? Reply to this email or join our community.
+
+The Bulwark Team 🛡️
