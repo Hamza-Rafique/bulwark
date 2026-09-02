@@ -231,5 +231,19 @@ router.get('/api/analytics', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Add this to dashboard.js
+router.get('/api/risks', async (req, res) => {
+    try {
+        // Get recent risk findings from database
+        // For now, return sample data
+        res.json({
+            total: 0,
+            bySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+            byCategory: {}
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 export default router;

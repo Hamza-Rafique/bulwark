@@ -11,10 +11,31 @@ import { extractFunctionsFromCode } from './src/function-extractor.js';
 import { validateTestCode } from './src/test-validator.js';
 import { scanForPatterns } from './src/pattern-scanner.js';
 import { logFeedback, getFeedbackStats, initDB } from './src/feedback-logger.js';
-import logger from './src/logger.js';
+
 import dashboardRouter from './src/dashboard.js';
 import { initSlack, sendSlackNotification } from './src/slack-notifier.js';
 import { addBetaUser, getBetaUsers, updateBetaUser } from './src/beta-signup.js';
+import {
+    createOrganization,
+    getOrganization,
+    getOrganizationsByMember,
+    addMember,
+    updateOrgSettings,
+    addRepoToOrg
+} from './src/team-management.js';
+
+import {
+    logAudit,
+    getAuditLogs,
+    getAuditSummary
+} from './src/audit-logger.js';
+
+import {
+    createRule,
+    getRules,
+    updateRule,
+    deleteRule
+} from './src/rule-engine.js';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -123,17 +144,17 @@ expressApp.post('/api/feedback', async (req, res) => {
 // Beta signup endpoint
 expressApp.post('/api/beta/signup', async (req, res) => {
     const { email } = req.body;
-    
+
     if (!email || !email.includes('@')) {
         return res.status(400).json({ error: 'Valid email is required' });
     }
-    
+
     try {
         const user = await addBetaUser(email);
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: 'You are on the beta list!',
-            user 
+            user
         });
     } catch (error) {
         if (error.message === 'Email already registered') {
@@ -149,10 +170,183 @@ expressApp.get('/api/beta/users', async (req, res) => {
     if (secret !== process.env.ADMIN_SECRET) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
-    
+
     try {
         const users = await getBetaUsers();
         res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// ============================================================
+// ORGANIZATION MANAGEMENT
+// ============================================================
+
+// Create organization
+expressApp.post('/api/enterprise/organizations', async (req, res) => {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+        return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    try {
+        const org = await createOrganization(name, email);
+        await logAudit({
+            user: email,
+            action: 'create_organization',
+            details: { organizationId: org.id, name: org.name }
+        });
+        res.json({ success: true, organization: org });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get organizations for user
+expressApp.get('/api/enterprise/organizations', async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+
+    try {
+        const orgs = await getOrganizationsByMember(email);
+        res.json(orgs);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add member to organization
+expressApp.post('/api/enterprise/organizations/:orgId/members', async (req, res) => {
+    const { orgId } = req.params;
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+
+    try {
+        const org = await addMember(orgId, email);
+        await logAudit({
+            user: req.headers['x-user-email'] || 'system',
+            action: 'add_member',
+            details: { organizationId: orgId, email }
+        });
+        res.json({ success: true, organization: org });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+
+// Get audit logs
+expressApp.get('/api/enterprise/audit', async (req, res) => {
+    const { user, action, fromDate, toDate, limit } = req.query;
+
+    try {
+        const logs = await getAuditLogs({ user, action, fromDate, toDate, limit: parseInt(limit) || 100 });
+        res.json(logs);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get audit summary
+expressApp.get('/api/enterprise/audit/summary', async (req, res) => {
+    try {
+        const summary = await getAuditSummary();
+        res.json(summary);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================================
+// CUSTOM RULES
+// ============================================================
+
+// Create custom rule
+expressApp.post('/api/enterprise/rules', async (req, res) => {
+    const { name, description, regex, severity, fix, category, organizationId } = req.body;
+
+    if (!name || !description || !regex) {
+        return res.status(400).json({ error: 'Name, description, and regex are required' });
+    }
+
+    try {
+        const rule = await createRule({
+            name,
+            description,
+            regex,
+            severity,
+            fix,
+            category,
+            organizationId,
+            createdBy: req.headers['x-user-email'] || 'system',
+        });
+
+        await logAudit({
+            user: req.headers['x-user-email'] || 'system',
+            action: 'create_rule',
+            details: { ruleId: rule.id, name: rule.name }
+        });
+
+        res.json({ success: true, rule });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get rules
+expressApp.get('/api/enterprise/rules', async (req, res) => {
+    const { organizationId } = req.query;
+
+    try {
+        const rules = await getRules(organizationId);
+        res.json(rules);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update rule
+expressApp.put('/api/enterprise/rules/:ruleId', async (req, res) => {
+    const { ruleId } = req.params;
+    const updates = req.body;
+
+    try {
+        const rule = await updateRule(ruleId, updates);
+        await logAudit({
+            user: req.headers['x-user-email'] || 'system',
+            action: 'update_rule',
+            details: { ruleId, name: rule.name }
+        });
+        res.json({ success: true, rule });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete rule
+expressApp.delete('/api/enterprise/rules/:ruleId', async (req, res) => {
+    const { ruleId } = req.params;
+
+    try {
+        const rule = await deleteRule(ruleId);
+        await logAudit({
+            user: req.headers['x-user-email'] || 'system',
+            action: 'delete_rule',
+            details: { ruleId, name: rule.name }
+        });
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -400,13 +594,21 @@ async function handlePullRequestOpened({ octokit, payload }) {
         }
 
         console.log(`🔍 Found ${functionsToTest.length} functions, ${riskFindings.length} risks`);
-        
-        // Send Slack notification
-        if (riskFindings.length > 0 || functionsToTest.length > 0) {
-            const riskSummary = riskFindings.slice(0, 3).map(r =>
-                `• ${r.title} (${r.severity})`
-            ).join('\n');
 
+        // Send Slack notification
+
+        if (riskFindings.length > 0 || functionsToTest.length > 0) {
+            // ✅ Get proper risk titles
+            const riskSummary = riskFindings.slice(0, 5).map(r => {
+                // Use title or name field
+                const title = r.title || r.name || 'Unknown Risk';
+                return `• ${title} (${r.severity || 'unknown'})`;
+            }).join('\n');
+            console.log('🔍 Raw risk findings:', JSON.stringify(riskFindings, null, 2));
+            if (riskFindings.length > 0) {
+                console.log('📋 First risk structure:', Object.keys(riskFindings[0]));
+                console.log('📋 First risk data:', riskFindings[0]);
+            }
             await sendSlackNotification(
                 `PR #${prNumber} analyzed`,
                 {
@@ -419,7 +621,7 @@ async function handlePullRequestOpened({ octokit, payload }) {
                 }
             );
         }
-        
+
         const functionsToProcess = functionsToTest.slice(0, MAX_FUNCTIONS_TO_TEST);
 
         for (const fn of functionsToProcess) {
@@ -513,18 +715,18 @@ const port = process.env.PORT || 3000;
 
 const server = http.createServer((req, res) => {
     const url = req.url || '';
-    
+
     // Log every request (except favicon)
     if (!url.includes('favicon')) {
         console.log(`🌐 ${req.method} ${url}`);
     }
-    
+
     // Route webhooks to the middleware
     if (url.startsWith(webhookPath)) {
         middleware(req, res);
         return;
     }
-    
+
     // Route everything else to Express
     expressApp(req, res);
 });

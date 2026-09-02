@@ -1,74 +1,261 @@
 [
-  {
+ {
     "id": "sql-injection",
-    "regex": "(exec|execute|query)\\s*\\(\\s*['\"`]\\s*SELECT.*\\$\\{|(exec|execute|query)\\s*\\(\\s*['\"`]\\s*INSERT.*\\$\\{|(exec|execute|query)\\s*\\(\\s*['\"`]\\s*UPDATE.*\\$\\{",
+    "name": "SQL Injection Vulnerability",
+    "title": "SQL Injection Vulnerability",
+    "category": "security",
     "severity": "critical",
-    "title": "Potential SQL Injection",
-    "description": "This code uses string interpolation in a SQL query, which could lead to SQL injection attacks.",
-    "fix": "Use parameterized queries instead of string interpolation.",
-    "examples": ["exec(`SELECT * FROM users WHERE id = ${userId}`)"]
-  },
-  {
-    "id": "null-check-missing",
-    "regex": "(?<!if\\s*\\(\\s*[\\w.]+\\s*[!]==\\s*(?:null|undefined)\\s*\\)\\s*return\\s*;)(?<!if\\s*\\(\\s*[\\w.]+\\s*\\.\\s*length\\s*>\\s*0\\s*\\)\\s*{)[^{]*\\.[^{]*\\s*[^?]",
-    "severity": "high",
-    "title": "Potential Null Pointer",
-    "description": "This function accesses object properties without checking if the object is null or undefined.",
-    "fix": "Add null checks before accessing properties: if (!obj) return;",
-    "examples": ["user.name", "items[0].price"]
-  },
-  {
-    "id": "unhandled-async",
-    "regex": "async\\s+function\\s+\\w+[\\s\\S]*?(?<!await\\s+)(?!try\\s*\\{)[^{]*$",
-    "severity": "high",
-    "title": "Unhandled Promise",
-    "description": "This async function may not handle errors properly.",
-    "fix": "Wrap async operations in try/catch or add .catch() handlers.",
-    "examples": ["await fetchData()", "await saveData()"]
+    "description": "This code uses string interpolation in a SQL query...",
+    "fix": "Use parameterized queries...",
+    "regex": "(exec|execute|query|prepare)\\s*\\(\\s*['\"`]\\s*(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER).*\\$\\{|\\+\\s*\\w+\\s*\\+",
+    "detection": "runtime",
+    "confidence": "high"
   },
   {
     "id": "hardcoded-credentials",
-    "regex": "(password|secret|key|token|apiKey|auth|credential)\\s*[:=]\\s*['\"`][^'\"`]{8,}['\"`]",
+    "name": "Hardcoded Credentials",
+    "category": "security",
     "severity": "critical",
-    "title": "Hardcoded Credentials",
-    "description": "This code contains hardcoded credentials, which is a security risk.",
-    "fix": "Use environment variables instead of hardcoded credentials.",
-    "examples": ["password: 'secret123'", "apiKey: 'abc123def456'"]
+    "description": "This code contains hardcoded credentials (passwords, API keys, tokens), which is a security risk.",
+    "fix": "Use environment variables or a secrets manager instead of hardcoded credentials.",
+    "examples": [
+      "password: 'secret123'",
+      "apiKey: 'abc123def456'"
+    ],
+    "regex": "(password|secret|key|token|apiKey|auth|credential|api_key|secret_key|access_token)\\s*[:=]\\s*['\"`][^'\"`]{8,}['\"`]",
+    "detection": "static",
+    "confidence": "high"
   },
   {
-    "id": "console-log",
-    "regex": "console\\.(log|debug|info|warn|error)\\(",
+    "id": "null-check-missing",
+    "name": "Missing Null/Undefined Check",
+    "category": "quality",
+    "severity": "high",
+    "description": "This function accesses object properties without checking if the object is null or undefined.",
+    "fix": "Add null checks before accessing properties: if (!obj) return; or use optional chaining (?.)",
+    "examples": [
+      "user.name",
+      "items[0].price"
+    ],
+    "regex": "(?<!if\\s*\\(\\s*[\\w.]+\\s*[!]==\\s*(?:null|undefined)\\s*\\)\\s*return\\s*;)(?<!if\\s*\\(\\s*[\\w.]+\\s*\\.\\s*length\\s*>\\s*0\\s*\\)\\s*{)[^{]*\\.[^{]*\\s*[^?]",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "unhandled-async",
+    "name": "Unhandled Async/Await",
+    "category": "quality",
+    "severity": "high",
+    "description": "This async function may not handle errors properly. Unhandled promise rejections can crash the application.",
+    "fix": "Wrap async operations in try/catch blocks or add .catch() handlers.",
+    "examples": [
+      "await fetchData()",
+      "await saveData()"
+    ],
+    "regex": "async\\s+function\\s+\\w+[\\s\\S]*?(?<!await\\s+)(?!try\\s*\\{)[^{]*$",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "console-log-production",
+    "name": "Console Statements in Production Code",
+    "category": "quality",
     "severity": "low",
-    "title": "Console Statement",
     "description": "This code contains console statements that should be removed in production.",
-    "fix": "Remove console statements or use proper logging framework.",
-    "examples": ["console.log('debug')", "console.error('error')"]
+    "fix": "Remove console statements or use a proper logging framework.",
+    "examples": [
+      "console.log('debug')",
+      "console.error('error')"
+    ],
+    "regex": "console\\.(log|debug|info|warn|error|table|trace)\\(",
+    "detection": "static",
+    "confidence": "high"
   },
   {
     "id": "infinite-loop",
-    "regex": "while\\s*\\(\\s*true\\s*\\)[^}]*}",
+    "name": "Potential Infinite Loop",
+    "category": "quality",
     "severity": "high",
-    "title": "Potential Infinite Loop",
     "description": "This code contains a while(true) loop without a break condition.",
     "fix": "Add a break condition or use a counter to prevent infinite loops.",
-    "examples": ["while (true) { ... }"]
+    "examples": [
+      "while (true) { ... }"
+    ],
+    "regex": "while\\s*\\(\\s*true\\s*\\)[^}]*}",
+    "detection": "static",
+    "confidence": "high"
   },
   {
     "id": "deprecated-api",
-    "regex": "fs\\.writeFileSync|fs\\.readFileSync|child_process\\.exec|eval\\(",
+    "name": "Deprecated or Unsafe API",
+    "category": "maintainability",
     "severity": "medium",
-    "title": "Deprecated or Unsafe API",
     "description": "This code uses deprecated or unsafe APIs that should be updated.",
     "fix": "Use safer alternatives like fs.promises or async/await.",
-    "examples": ["fs.writeFileSync", "eval('...')"]
+    "examples": [
+      "fs.writeFileSync",
+      "eval('...')"
+    ],
+    "regex": "fs\\.(writeFileSync|readFileSync|existsSync|mkdirSync)|child_process\\.exec|eval\\(",
+    "detection": "static",
+    "confidence": "high"
   },
   {
     "id": "missing-rate-limit",
-    "regex": "for\\s*\\([^)]*\\)\\s*{((?!await\\s+sleep|setTimeout|setInterval)[\\s\\S])*}",
+    "name": "Missing Rate Limiting",
+    "category": "performance",
     "severity": "medium",
-    "title": "Missing Rate Limiting",
-    "description": "This loop may process many items without rate limiting.",
-    "fix": "Add rate limiting or batching to prevent overwhelming APIs.",
-    "examples": ["for (item of items) { await process(item) }"]
+    "description": "This loop may process many items without rate limiting, potentially overwhelming APIs or databases.",
+    "fix": "Add rate limiting or batching to prevent overwhelming resources.",
+    "examples": [
+      "for (item of items) { await process(item) }"
+    ],
+    "regex": "for\\s*\\([^)]*\\)\\s*{((?!await\\s+sleep|setTimeout|setInterval)[\\s\\S])*}",
+    "detection": "static",
+    "confidence": "low"
+  },
+  {
+    "id": "xss-vulnerability",
+    "name": "Cross-Site Scripting (XSS) Vulnerability",
+    "category": "security",
+    "severity": "critical",
+    "description": "This code inserts user input directly into HTML without sanitization.",
+    "fix": "Sanitize user input using DOMPurify or similar library.",
+    "examples": [
+      "innerHTML = userInput",
+      "document.write(userInput)"
+    ],
+    "regex": "(innerHTML|outerHTML|document\\.write)\\s*=\\s*[^;]+",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "path-traversal",
+    "name": "Path Traversal Vulnerability",
+    "category": "security",
+    "severity": "critical",
+    "description": "This code uses user input to construct file paths without validation.",
+    "fix": "Validate and sanitize file paths, use path.resolve and check against root directory.",
+    "examples": [
+      "fs.readFileSync(`/files/${userInput}`)"
+    ],
+    "regex": "fs\\.(read|write|open|create|access|stat|append|rename|unlink)\\s*\\(\\s*['\"`]\\s*[^'\"`]*\\$\\{[^}]+\\}",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "weak-encryption",
+    "name": "Weak Encryption",
+    "category": "security",
+    "severity": "high",
+    "description": "This code uses weak encryption algorithms (MD5, SHA1, DES, RC4).",
+    "fix": "Use modern encryption algorithms like AES-256-GCM or bcrypt.",
+    "examples": [
+      "crypto.createHash('md5')",
+      "crypto.createCipher('des')"
+    ],
+    "regex": "crypto\\.create(?:Hash|Hmac|Cipher)\\s*\\(\\s*['\"`](md5|sha1|des|rc4|blowfish)['\"`]",
+    "detection": "static",
+    "confidence": "high"
+  },
+  {
+    "id": "no-input-validation",
+    "name": "Missing Input Validation",
+    "category": "security",
+    "severity": "high",
+    "description": "This function accepts user input without validation.",
+    "fix": "Add input validation using libraries like Joi, Yup, or Zod.",
+    "examples": [
+      "function process(data) { ... }"
+    ],
+    "regex": "function\\s+\\w+\\s*\\(\\s*\\w+\\s*\\)\\s*{((?!if\\s*\\(|typeof|instanceof|validator|validate)[\\s\\S])*}",
+    "detection": "static",
+    "confidence": "low"
+  },
+  {
+    "id": "memory-leak",
+    "name": "Potential Memory Leak",
+    "category": "performance",
+    "severity": "medium",
+    "description": "This code may cause memory leaks due to unremoved listeners or references.",
+    "fix": "Remove event listeners when no longer needed, use WeakMap/WeakSet for references.",
+    "examples": [
+      "setInterval(callback, 1000)",
+      "emitter.on('event', handler)"
+    ],
+    "regex": "setInterval\\s*\\([^)]+\\)|setTimeout\\s*\\([^)]+\\)|\\.on\\s*\\(\\s*['\"`][^'\"`]+['\"`]\\s*,\\s*function",
+    "detection": "static",
+    "confidence": "low"
+  },
+  {
+    "id": "hardcoded-url",
+    "name": "Hardcoded URLs/Endpoints",
+    "category": "maintainability",
+    "severity": "low",
+    "description": "This code contains hardcoded URLs that should be configurable.",
+    "fix": "Use environment variables or configuration files for URLs.",
+    "examples": [
+      "fetch('https://api.example.com/data')"
+    ],
+    "regex": "(fetch|axios|http\\.|https\\.|request)\\s*\\(\\s*['\"`]https?://[^'\"`]+['\"`]",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "too-many-parameters",
+    "name": "Too Many Function Parameters",
+    "category": "quality",
+    "severity": "low",
+    "description": "This function has more than 5 parameters, which reduces readability and maintainability.",
+    "fix": "Use an options object pattern: function(options) { ... }",
+    "examples": [
+      "function createUser(name, email, age, address, phone, role) { ... }"
+    ],
+    "regex": "function\\s+\\w+\\s*\\(\\s*(\\w+\\s*,\\s*\\w+\\s*,\\s*\\w+\\s*,\\s*\\w+\\s*,\\s*\\w+\\s*,\\s*\\w+)",
+    "detection": "static",
+    "confidence": "high"
+  },
+  {
+    "id": "nested-callbacks",
+    "name": "Callback Hell (Pyramid of Doom)",
+    "category": "quality",
+    "severity": "medium",
+    "description": "This code uses deeply nested callbacks, making it hard to read and maintain.",
+    "fix": "Use async/await or Promises instead of nested callbacks.",
+    "examples": [
+      "functionA(() => { functionB(() => { functionC(() => { ... }) }) })"
+    ],
+    "regex": "(function\\s*\\([^)]*\\)\\s*{[^}]*function\\s*\\([^)]*\\)\\s*{[^}]*function\\s*\\([^)]*\\)\\s*{)",
+    "detection": "static",
+    "confidence": "medium"
+  },
+  {
+    "id": "complex-condition",
+    "name": "Complex Conditional Logic",
+    "category": "quality",
+    "severity": "low",
+    "description": "This code contains complex boolean conditions that are hard to understand.",
+    "fix": "Break complex conditions into named boolean variables or functions.",
+    "examples": [
+      "if (a && b || c && d || e && f) { ... }"
+    ],
+    "regex": "if\\s*\\([^)]{50,}\\)",
+    "detection": "static",
+    "confidence": "high"
+  },
+  {
+    "id": "no-error-handling",
+    "name": "Missing Error Handling",
+    "category": "quality",
+    "severity": "high",
+    "description": "This code doesn't handle errors properly, which could cause crashes.",
+    "fix": "Add try/catch blocks, or check for error conditions explicitly.",
+    "examples": [
+      "const result = JSON.parse(input)",
+      "data.property.value"
+    ],
+    "regex": "JSON\\.parse\\s*\\([^)]*\\)(?![\\s]*catch)|\\w+\\.\\w+\\.\\w+(?![\\s]*&&)",
+    "detection": "static",
+    "confidence": "medium"
   }
 ]
