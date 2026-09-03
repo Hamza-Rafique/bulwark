@@ -9,7 +9,7 @@
 
 > **Stop bugs before they reach production. Bulwark automatically analyzes PRs, detects risks, and generates tests using AI.**
 
-![Bulwark Demo](/🛡️-Bulwark-AI-Code-Review-That-Actually-Works.png)
+![Bulwark Demo](./public/🛡️-Bulwark-AI-Code-Review-That-Actually-Works.png)
 
 ---
 
