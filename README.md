@@ -320,8 +320,8 @@ This project is licensed under the Apache 2.0 License - see the LICENSE file for
 ## 📧 Contact
 
 - **Issues:** GitHub Issues
-- **Email:** your-email@example.com
-- **Twitter:** @yourhandle
+- **Email:** hamzarafique964@gmail.com
+- **Twitter:** @HamzaRafique964
 - **Website:** bulwark.dev
 
 ---
